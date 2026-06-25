@@ -1,0 +1,31 @@
+# ── Next.js ──────────────────────────────────────────────────
+.next/
+out/
+node_modules/
+npm-debug.log*
+
+# ── Environment files (NEVER commit these — contain secret keys) ──
+.env
+.env.local
+.env.*.local
+python-service/.env
+
+# ── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# ── OS ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Editor ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp

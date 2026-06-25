@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+httpx
+supabase
+apscheduler
+twilio
+pywebpush
+python-dotenv
+pydantic
+pydantic-settings
+yfinance

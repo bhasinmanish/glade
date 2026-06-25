@@ -1,0 +1,243 @@
+"use client";
+
+import { useState } from "react";
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import type { Trade } from "@/lib/types";
+
+interface Props {
+  open: boolean;
+  onClose: () => void;
+  onAdded: (trade: Trade) => void;
+  defaultDate?: string;
+}
+
+const today = () => new Date().toISOString().split("T")[0];
+
+export function AddTradeDialog({ open, onClose, onAdded, defaultDate }: Props) {
+  const [form, setForm] = useState({
+    symbol:     "",
+    side:       "long" as "long" | "short",
+    trade_type: "day_trade" as Trade["trade_type"],
+    entry_date: defaultDate ?? today(),
+    entry_price: "",
+    exit_price:  "",
+    qty:         "",
+    setup_notes: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error,   setError]   = useState("");
+
+  function set(key: string, value: string) {
+    setForm(f => ({ ...f, [key]: value }));
+  }
+
+  // Live P&L preview
+  const ep  = parseFloat(form.entry_price);
+  const xp  = parseFloat(form.exit_price);
+  const qty = parseFloat(form.qty);
+  const pnlPreview =
+    !isNaN(ep) && !isNaN(xp) && !isNaN(qty)
+      ? (form.side === "long" ? xp - ep : ep - xp) * qty
+      : null;
+
+  function reset() {
+    setForm({ symbol: "", side: "long", trade_type: "day_trade", entry_date: defaultDate ?? today(), entry_price: "", exit_price: "", qty: "", setup_notes: "" });
+    setError("");
+  }
+
+  async function submit() {
+    if (!form.symbol.trim() || !form.entry_price || !form.qty) {
+      setError("Symbol, entry price, and shares are required.");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      const res = await fetch("/api/trades", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          symbol:      form.symbol.toUpperCase().trim(),
+          side:        form.side,
+          trade_type:  form.trade_type,
+          entry_date:  form.entry_date,
+          entry_price: parseFloat(form.entry_price),
+          exit_price:  form.exit_price ? parseFloat(form.exit_price) : null,
+          exit_date:   form.exit_price ? form.entry_date : null,
+          qty:         parseFloat(form.qty),
+          pnl:         pnlPreview,
+          setup_notes: form.setup_notes || null,
+          account:     "main",
+        }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Failed");
+      const trade = await res.json() as Trade;
+      onAdded(trade);
+      reset();
+      onClose();
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={v => { if (!v) { reset(); onClose(); } }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Log a Trade</DialogTitle>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-1">
+          {/* Symbol + Side */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="symbol">Symbol</Label>
+              <Input
+                id="symbol"
+                placeholder="AAPL"
+                value={form.symbol}
+                onChange={e => set("symbol", e.target.value.toUpperCase())}
+                className="font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Side</Label>
+              <div className="flex rounded-md border border-border overflow-hidden h-9">
+                {(["long", "short"] as const).map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => set("side", s)}
+                    className={cn(
+                      "flex-1 text-sm capitalize transition-colors",
+                      form.side === s
+                        ? s === "long"
+                          ? "bg-profit/20 text-profit font-medium"
+                          : "bg-loss/20 text-loss font-medium"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Type + Date */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Trade Type</Label>
+              <Select value={form.trade_type} onValueChange={v => set("trade_type", v)}>
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="scalp">Scalp</SelectItem>
+                  <SelectItem value="day_trade">Day Trade</SelectItem>
+                  <SelectItem value="swing">Swing</SelectItem>
+                  <SelectItem value="investment">Investment</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="entry_date">Date</Label>
+              <Input
+                id="entry_date"
+                type="date"
+                value={form.entry_date}
+                onChange={e => set("entry_date", e.target.value)}
+                className="h-9"
+              />
+            </div>
+          </div>
+
+          {/* Entry / Exit / Qty */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="entry_price">Entry $</Label>
+              <Input
+                id="entry_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={form.entry_price}
+                onChange={e => set("entry_price", e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="exit_price">Exit $</Label>
+              <Input
+                id="exit_price"
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={form.exit_price}
+                onChange={e => set("exit_price", e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="qty">Shares</Label>
+              <Input
+                id="qty"
+                type="number"
+                min="1"
+                placeholder="100"
+                value={form.qty}
+                onChange={e => set("qty", e.target.value)}
+                className="h-9 font-mono"
+              />
+            </div>
+          </div>
+
+          {/* P&L preview */}
+          {pnlPreview !== null && (
+            <div className={cn(
+              "text-sm font-semibold text-center py-1.5 rounded-md",
+              pnlPreview >= 0 ? "text-profit bg-profit/10" : "text-loss bg-loss/10"
+            )}>
+              Estimated P&L: {pnlPreview >= 0 ? "+" : ""}${pnlPreview.toFixed(2)}
+            </div>
+          )}
+
+          {/* Setup notes */}
+          <div className="space-y-1.5">
+            <Label htmlFor="setup_notes">Setup Notes <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <Textarea
+              id="setup_notes"
+              placeholder="What was your thesis for this trade?"
+              value={form.setup_notes}
+              onChange={e => set("setup_notes", e.target.value)}
+              className="h-20 resize-none text-sm"
+            />
+          </div>
+
+          {error && <p className="text-xs text-loss">{error}</p>}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => { reset(); onClose(); }}>
+            Cancel
+          </Button>
+          <Button onClick={submit} disabled={loading}>
+            {loading ? "Saving…" : "Log Trade"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
