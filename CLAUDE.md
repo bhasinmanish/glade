@@ -1,4 +1,4 @@
-# Glade — Trading Dashboard
+# Glade Deck — Trading Dashboard
 
 A personal trading dashboard that automates the repetitive parts of a trader's day: morning prep, scanning, and end-of-day review. Built for one user initially but multi-user-ready.
 
@@ -23,12 +23,14 @@ A personal trading dashboard that automates the repetitive parts of a trader's d
 
 ## Deployment (LIVE — fully cloud-hosted, zero local processes required)
 
-- **Frontend**: https://glade-zeta.vercel.app (Vercel, auto-deploys on push to `main`)
-- **Python service**: https://glade-production.up.railway.app (Railway, auto-restarts on var changes, auto-redeploys on push to `main`)
-- **GitHub repo**: https://github.com/bhasinmanish/glade (public — required for Vercel Hobby plan auto-deploy)
+- **Frontend**: https://gladedeck-zeta.vercel.app (Vercel, auto-deploys on push to `main`)
+- **Python service**: https://gladedeck-production.up.railway.app (Railway, auto-restarts on var changes, auto-redeploys on push to `main`)
+- **GitHub repo**: https://github.com/bhasinmanish/gladedeck (public — required for Vercel Hobby plan auto-deploy; renamed from `glade`)
 - **Database/Auth**: Supabase cloud project (uryrtpamvkprugnjqesn.supabase.co)
 
-Opening https://glade-zeta.vercel.app on any device works immediately — no terminal, no `npm run dev`, no `python main.py`. Login, scanner, alerts, and email all run fully in the cloud.
+Opening https://gladedeck-zeta.vercel.app on any device works immediately — no terminal, no `npm run dev`, no `python main.py`. Login, scanner, alerts, and email all run fully in the cloud.
+
+Project was renamed from "Glade" to "Glade Deck" (display) / `gladedeck` (repo, URLs) — see troubleshooting log item 12 below for the full rename process if doing this again.
 
 To run locally for development only:
 - Next.js: `npm run dev` from root
@@ -42,9 +44,9 @@ To run locally for development only:
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://uryrtpamvkprugnjqesn.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-NEXT_PUBLIC_APP_URL=https://glade-zeta.vercel.app
+NEXT_PUBLIC_APP_URL=https://gladedeck-zeta.vercel.app
 SUPABASE_SERVICE_ROLE_KEY=...
-PYTHON_SERVICE_URL=https://glade-production.up.railway.app
+PYTHON_SERVICE_URL=https://gladedeck-production.up.railway.app
 PYTHON_SERVICE_SECRET=glade-secret-123
 RESEND_API_KEY=re_joDAfVjm_Jk389H6kVFHS96MjFjHTzRqH
 RESEND_TEST_TO=manshabhasin9@gmail.com
@@ -58,7 +60,7 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=932453965974-iqmo9qcq3k513l43v7faltcvp5uujq2h.apps.
 SUPABASE_URL=https://uryrtpamvkprugnjqesn.supabase.co       (no trailing slash — caused PGRST125 errors when present)
 SUPABASE_SERVICE_ROLE_KEY=...                                 (must be the `service_role` key, not `anon`)
 SERVICE_SECRET=glade-secret-123                                (must exactly match Vercel's PYTHON_SERVICE_SECRET)
-GLADE_APP_URL=https://glade-zeta.vercel.app                   (used for links inside alert/notification emails)
+GLADE_APP_URL=https://gladedeck-zeta.vercel.app                   (used for links inside alert/notification emails)
 RESEND_API_KEY=re_joDAfVjm_Jk389H6kVFHS96MjFjHTzRqH
 TWILIO_ACCOUNT_SID=...           (placeholder, SMS not active)
 TWILIO_AUTH_TOKEN=...            (placeholder, SMS not active)
@@ -176,7 +178,7 @@ python-service/
   email_sender.py                — Resend email integration
   Dockerfile                     — Used by Railway for build/deploy
 
-next.config.mjs                  — ignoreBuildErrors/ignoreDuringBuilds (pre-existing TS errors), allowedOrigins for server actions
+next.config.mjs                  — ignoreBuildErrors/ignoreDuringBuilds (pre-existing TS errors), allowedOrigins for server actions (includes both old glade-zeta and new gladedeck-zeta domains)
 .gitignore                       — excludes .env*, node_modules, .next, __pycache__, .vercel
 ```
 
@@ -234,7 +236,8 @@ Problems hit and fixed while standing up Vercel + Railway, in case similar error
 8. **Scan failed: 403 Forbidden** → secret mismatch between Vercel's `PYTHON_SERVICE_SECRET` and Railway's `SERVICE_SECRET` — both must be identical (`glade-secret-123`).
 9. **"Name or service not known" / Invalid API key in Railway logs** → `SUPABASE_SERVICE_ROLE_KEY` in Railway was wrong/truncated; re-copied the full `service_role` key (not `anon`) from Supabase → Settings → API.
 10. **postgrest.exceptions.APIError PGRST125 "Invalid path specified in request URL"** → `SUPABASE_URL` in Railway had a trailing slash or stray whitespace from copy-paste; fixed by retyping the exact URL with no trailing slash.
-11. **Email links would point to localhost in production** → added `NEXT_PUBLIC_APP_URL` (Vercel) and `GLADE_APP_URL` (Railway) pointing to `https://glade-zeta.vercel.app`.
+11. **Email links would point to localhost in production** → added `NEXT_PUBLIC_APP_URL` (Vercel) and `GLADE_APP_URL` (Railway) pointing to the live Vercel URL.
+12. **Full rebrand "Glade" → "Glade Deck" / `gladedeck`** → order that worked: (1) update all display-text strings in code and push, (2) rename GitHub repo (Settings → repository name) — old git remotes auto-redirect but should be updated with `git remote set-url`, (3) rename Vercel project (Settings → General) which changes the `.vercel.app` URL, (4) add new URL to Supabase → Authentication → URL Configuration (Site URL + Redirect URLs), (5) update `NEXT_PUBLIC_APP_URL` in Vercel, (6) update `next.config.mjs` allowedOrigins with new domain, (7) rename Railway service/project (Settings) and reconnect the GitHub source if it shows "GitHub Repo not found" (happens because Railway's source link breaks on repo rename — fix via the edit/pencil icon next to Source Repo), (8) update `PYTHON_SERVICE_URL` in Vercel to new Railway domain, (9) update `GLADE_APP_URL` in Railway to new Vercel domain, (10) redeploy Vercel — must be the latest deployment, not an older one from the list, (11) verify login + scan end-to-end.
 
 ---
 
